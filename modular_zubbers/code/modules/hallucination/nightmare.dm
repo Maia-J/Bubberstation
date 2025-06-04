@@ -19,13 +19,15 @@
 	SEND_SOUND(hallucinator, new_sound)
 	to_chat(hallucinator, span_boldwarning("[faker] emerges from the darkness!"))
 	faker.AddComponent(/datum/component/leash, owner = hallucinator, distance = 1)
-	addtimer(CALLBACK(src, PROC_REF(attack)), 1.5 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(attack)), rand(20, 50) DECISECONDS)
 	return TRUE
 
 /datum/hallucination/nightmare/proc/attack(atom/target)
 	var/obj/item/light_eater/eater = new()
+	var/attack_dir = (get_dir(faker, hallucinator))
+	faker.dir = attack_dir
 	faker.do_attack_animation(hallucinator, null, eater)
-	hallucinator.create_splatter(get_dir(faker, hallucinator))
+	hallucinator.create_splatter(attack_dir)
 	hallucinator.Paralyze(2 SECONDS)
 	to_chat(hallucinator, span_boldwarning("[faker] gores [hallucinator] with [eater], ripping into them!"))
 	to_chat(hallucinator, span_boldwarning("[hallucinator]'s chest sprays chips of bone and develops a nasty looking bruise!"))
@@ -51,10 +53,9 @@
 /obj/effect/client_image_holder/hallucination/nightmare/Initialize(mapload, list/mobs_which_see_us, datum/hallucination/parent)
 	var/mob/living/hallucinator = parent.hallucinator
 	if (ishuman(hallucinator))
-		image_icon = getFlatIcon(get_dynamic_human_appearance(null, /datum/species/shadow/nightmare))
+		image_icon = image(get_dynamic_human_appearance(null, /datum/species/shadow/nightmare))
 		name = pick(GLOB.nightmare_names)
 		return ..()
-
 	image_icon = hallucinator.icon
 	image_state = hallucinator.icon_state
 	image_pixel_x = hallucinator.pixel_x
