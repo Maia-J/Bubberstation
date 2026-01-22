@@ -9949,6 +9949,7 @@
 #include "modular_zubbers\code\modules\storyteller\event_defines\major\abductor.dm"
 #include "modular_zubbers\code\modules\storyteller\event_defines\major\blob.dm"
 #include "modular_zubbers\code\modules\storyteller\event_defines\major\fugitives.dm"
+#include "modular_zubbers\code\modules\storyteller\event_defines\major\magic_storm.dm"
 #include "modular_zubbers\code\modules\storyteller\event_defines\major\major_overrides.dm"
 #include "modular_zubbers\code\modules\storyteller\event_defines\major\morph.dm"
 #include "modular_zubbers\code\modules\storyteller\event_defines\major\pirates.dm"

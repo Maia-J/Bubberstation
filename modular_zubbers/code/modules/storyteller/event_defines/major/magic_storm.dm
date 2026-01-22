@@ -1,0 +1,69 @@
+/// Like a meteor wave except with spells that are launched against the
+/// station, prioritizing people unfortunate enough to be in space.
+/// Nowhere near as destructive but small damage is to be expected
+/datum/round_event_control/magic_storm
+	name = "Magic Storm"
+	typepath = /datum/round_event/magic_storm
+	description = "Pummels the station in spell projectiles, targeting \
+	those unlucky enough to be in space."
+	weight = 6 // Not as destructive as meteors but still plenty dangerous
+	min_players = 20
+	max_occurrences = 3
+	earliest_start = 15 MINUTES
+	category = EVENT_CATEGORY_SPACE
+	map_flags = EVENT_SPACE_ONLY
+	track = EVENT_TRACK_MAJOR
+	tags = list(TAG_SPACE, TAG_DESTRUCTIVE, TAG_CHAOTIC, TAG_MAGIC)
+
+	// Commonly summoned by wizards
+	min_wizard_trigger_potency = 1
+	max_wizard_trigger_potency = 2
+
+/datum/round_event_control/magic_storm/can_spawn_event(players_amt, allow_magic)
+	. = ..()
+	if(!.)
+		return FALSE
+	// Radiation actually directly counters magic, trust me,
+	// this isn't due to parallax layer intermingling
+	if(locate(/datum/station_trait/nebula/hostile/radiation) in SSstation.station_traits)
+		return FALSE
+	return TRUE
+
+/datum/round_event/magic_storm
+	start_when = 30 EVENT_SECONDS
+	end_when = 240 EVENT_SECONDS // Takes a while to finish
+	announce_when = 1
+
+	/// The magical nebula that appears around the station during the storm
+	var/nebula_layer = /atom/movable/screen/parallax_layer/random/space_gas/magic
+	/// The color space is gonna change into as this happens
+	var/aurora_color = "#AA00FF"
+	/// Original parallax layer
+	var/atom/movable/screen/parallax_layer/random/cached_random_layer = null
+
+/datum/round_event/magic_storm/setup()
+	cached_random_layer = SSparallax.random_layer?.type
+	SSparallax.swap_out_random_parallax_layer(nebula_layer)
+	gradient_space_light(GLOB.base_starlight_color, aurora_color)
+
+/datum/round_event/magic_storm/announce(fake)
+	priority_announce("The station is entering a magical dust cloud. Crew are advised to stay inside the station until the storm passes.")
+
+/datum/round_event/magic_storm/tick()
+	// TODO: Actual storm
+
+/datum/round_event/magic_storm/end()
+	priority_announce("The magical dust cloud has passed the station.")
+	if(isnull(cached_random_layer))
+		qdel(SSparallax.random_layer)
+	else
+		SSparallax.swap_out_random_parallax_layer(cached_random_layer)
+	gradient_space_light(aurora_color, GLOB.base_starlight_color)
+
+/datum/round_event/magic_storm/proc/gradient_space_light(var/old_color, var/new_color)
+	// TODO: Actual fade in/fade out
+	set_starlight(new_color)
+
+/// Purple glowing magical mist
+/atom/movable/screen/parallax_layer/random/space_gas/magic
+	parallax_color = list(0,0,0,0, 1,0,2,0, 0,0,0,0, 0,0,0,1, 0,0,0,0)
