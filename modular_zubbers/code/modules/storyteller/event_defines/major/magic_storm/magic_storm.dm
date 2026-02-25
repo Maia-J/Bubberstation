@@ -50,7 +50,15 @@
 	priority_announce("The station is entering a magical dust cloud. Crew are advised to stay inside the station until the storm passes.")
 
 /datum/round_event/magic_storm/tick()
-	// TODO: Actual storm
+	var/list/potential_victims = list()
+	for(var/mob/living/player in GLOB.alive_mob_list)
+		var/turf/victim_turf = get_turf(player)
+		if(victim_turf && is_station_level(victim_turf.z) && istype(victim_turf, /turf/open/space))
+			potential_victims += player
+		continue
+	if(!length(potential_victims))
+		potential_victims = null
+	spawn_space_spells(4, null, null, pick(potential_victims)) // TODO: Make the spell list
 
 /datum/round_event/magic_storm/end()
 	priority_announce("The magical dust cloud has passed the station.")
