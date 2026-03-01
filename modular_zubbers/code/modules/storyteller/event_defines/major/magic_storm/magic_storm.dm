@@ -40,10 +40,30 @@
 	var/aurora_color = "#AA00FF"
 	/// Original parallax layer
 	var/atom/movable/screen/parallax_layer/random/cached_random_layer = null
+	/// List of spells we're gonna be spawning, with weights
+	var/list/spell_list = list(
+		/obj/projectile/magic/nothing = 20, // We're in an unstable magic cloud. Sometimes the potency aint there.
+		/obj/projectile/magic/arcane_barrage = 20,
+		/obj/projectile/magic/spellcard = 20,
+		/obj/projectile/magic/flying = 15, // Yeet
+		/obj/projectile/temp/chill = 15,
+		// The delimbing brothers
+		/obj/projectile/magic/spellblade = 10,
+		/obj/projectile/magic/fireball = 10,
+		// Rare funny things
+		/obj/projectile/magic/aoe/lightning = 5,
+		/obj/projectile/magic/safety = 5,
+		/obj/projectile/magic/resurrection = 3, // Please don't put dead bodies out during the storm to gamble.
+		/obj/projectile/magic/death = 3, // Also don't put yourself out there
+		/obj/projectile/magic/antimagic = 3, // Antimagic is a kind of magic.. just evil
+		/obj/projectile/magic/teleport = 2,
+		/obj/projectile/magic/locker = 2,
+		/obj/projectile/magic/animate = 2, // My solar panel just got up and walked away!
+	)
 
 /datum/round_event/magic_storm/setup()
 	cached_random_layer = SSparallax.random_layer?.type
-	SSparallax.swap_out_random_parallax_layer(nebula_layer)
+	SSparallax.swap_out_random_parallax_layer(nebula_layer) // Todo: Rework this into a funny lil overlay or something
 	gradient_space_light(GLOB.base_starlight_color, aurora_color)
 
 /datum/round_event/magic_storm/announce(fake)
@@ -58,7 +78,7 @@
 		continue
 	if(!length(potential_victims))
 		potential_victims = null
-	spawn_space_spells(4, null, null, pick(potential_victims)) // TODO: Make the spell list
+	spawn_space_spells(4, spell_list, null, pick(potential_victims))
 
 /datum/round_event/magic_storm/end()
 	priority_announce("The magical dust cloud has passed the station.")

@@ -22,9 +22,6 @@
 	else
 		start_side = pick(GLOB.cardinals)
 
-	if(!length(magic_types))
-		magic_types = typesof(/obj/projectile/magic) - /obj/projectile/magic
-
 	var/start_Z
 	if(target)
 		start_Z = target.z
@@ -34,9 +31,15 @@
 		picked_goal = spaceDebrisFinishLoc(start_side, start_Z)
 	picked_start = spaceDebrisStartLoc(start_side, start_Z, distance_from_edge)
 
-	var/spelltype = pick(magic_types)
+	var/spelltype
+	if(!length(magic_types))
+		magic_types = typesof(/obj/projectile/magic) - /obj/projectile/magic
+		spelltype = pick(magic_types)
+	else
+		spelltype = pick_weight(magic_types)
+
 	var/obj/projectile/spell = new spelltype(picked_start)
-	spell.firer = picked_start // This is stupid but I don't think there's a better way
+
 	spell.fired_from = picked_start
 	spell.range = 250
 	spell.aim_projectile(picked_goal, picked_start)
