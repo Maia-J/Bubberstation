@@ -12,7 +12,7 @@
 	earliest_start = 15 MINUTES
 	category = EVENT_CATEGORY_SPACE
 	map_flags = EVENT_SPACE_ONLY
-	track = EVENT_TRACK_MAJOR
+	track = EVENT_TRACK_MAJOR // Consider this for moderate instead
 	tags = list(TAG_SPACE, TAG_DESTRUCTIVE, TAG_CHAOTIC, TAG_MAGIC)
 
 	// Commonly summoned by wizards
