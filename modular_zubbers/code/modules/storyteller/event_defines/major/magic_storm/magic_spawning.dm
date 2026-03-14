@@ -1,15 +1,16 @@
 
 
-/proc/spawn_space_spells(number = 10, list/magic_types, direction, atom/target)
+/proc/spawn_space_spells(number = 10, list/magic_types, direction, atom/target, individual_homing_chance = 20)
 	for(var/i in 1 to number)
-		spawn_space_spell(magic_types, direction, target)
+		spawn_space_spell(magic_types, direction, target, homing_chance = individual_homing_chance)
 
 /// Spawns a single space spell and launches it toward the station
 ///
 /// - `list/magic_types` - Self explainable. If empty, any /obj/projectile/magic is launched
 /// - `direction` - The cardinal direction from which we spawn spells. If empty, random direction
 /// - `atom/target` - Optional victim
-/proc/spawn_space_spell(list/magic_types, direction, atom/target, distance_from_edge = 0)
+/// - `homing_chance` - Chance we home on the victim if they're a mob/living
+/proc/spawn_space_spell(list/magic_types, direction, atom/target, distance_from_edge = 0, homing_chance = 20)
 	if(SSmapping.is_planetary())
 		stack_trace("Tried to spawn a space spell on a planetary map.")
 		return
@@ -43,5 +44,6 @@
 	spell.fired_from = picked_start
 	spell.range = 250
 	spell.aim_projectile(picked_goal, picked_start)
-	spell.set_homing_target(picked_goal)
+	if(isliving(picked_goal) && prob(homing_chance))
+		spell.set_homing_target(picked_goal)
 	spell.fire()
