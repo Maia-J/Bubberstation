@@ -4,7 +4,7 @@
 	name = "\improper sparkles"
 	icon = 'modular_zubbers/icons/effects/magic_lights.dmi'
 	icon_state = "lights"
-	desc = ""
+	desc = null
 	light_range = 0.8
 	light_power = 0.3
 	light_system = OVERLAY_LIGHT
