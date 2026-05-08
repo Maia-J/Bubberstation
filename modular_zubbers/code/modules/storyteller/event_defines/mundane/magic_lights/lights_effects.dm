@@ -65,4 +65,4 @@
 	if(istype(entered, /mob/living))
 		var/mob/living/entered_living
 		for(var/datum/status_effect/magical_light/to_apply in effect_types)
-			entered_living.apply_status_effect(to_apply, potency = src.potency)
+			UNLINT(entered_living.apply_status_effect(to_apply, potency = src.potency)) // Sadly spacemanDMM wont shutup

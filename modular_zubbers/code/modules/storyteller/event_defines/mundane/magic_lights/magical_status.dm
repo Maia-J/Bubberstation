@@ -10,6 +10,10 @@
 	/// knowledgeable (Curators, Chaplains, and Wizards)
 	var/special_description = "no special effect"
 
+/datum/status_effect/magical_light/on_creation(mob/living/new_owner, potency, ...)
+	. = ..()
+
+
 /atom/movable/screen/alert/status_effect/magical_light
 	name = "Magical aura"
 	desc = "You feel an aura of magic around yourself"

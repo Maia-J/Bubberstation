@@ -23,10 +23,6 @@
 	. = ..()
 	if(!.)
 		return FALSE
-	// Radiation actually directly counters magic, trust me,
-	// this isn't due to parallax layer intermingling
-	if(locate(/datum/station_trait/nebula/hostile/radiation) in SSstation.station_traits)
-		return FALSE
 	return TRUE
 
 /datum/round_event/magic_storm
@@ -34,12 +30,6 @@
 	end_when = 240 EVENT_SECONDS // Takes a while to finish
 	announce_when = 1
 
-	/// The magical nebula that appears around the station during the storm
-	var/nebula_layer = /atom/movable/screen/parallax_layer/random/space_gas/magic
-	/// The color space is gonna change into as this happens
-	var/aurora_color = "#AA00FF"
-	/// Original parallax layer
-	var/atom/movable/screen/parallax_layer/random/cached_random_layer = null
 	/// List of spells we're gonna be spawning, with weights
 	var/list/spell_list = list(
 		/obj/projectile/magic/nothing = 20, // We're in an unstable magic cloud. Sometimes the potency aint there.
@@ -62,9 +52,8 @@
 	)
 
 /datum/round_event/magic_storm/setup()
-	cached_random_layer = SSparallax.random_layer?.type
-	SSparallax.swap_out_random_parallax_layer(nebula_layer) // Todo: Rework this into a funny lil overlay or something
-	gradient_space_light(GLOB.base_starlight_color, aurora_color)
+	// The TG parallax system is not in the place to allow event-only parallax layers
+	// I just spent 12 hours trying to hack it in to look good, with no success
 
 /datum/round_event/magic_storm/announce(fake)
 	priority_announce("The station is entering a magical dust cloud. Crew are advised to stay inside the station until the storm passes.")
@@ -82,16 +71,3 @@
 
 /datum/round_event/magic_storm/end()
 	priority_announce("The magical dust cloud has passed the station.")
-	if(isnull(cached_random_layer))
-		qdel(SSparallax.random_layer)
-	else
-		SSparallax.swap_out_random_parallax_layer(cached_random_layer)
-	gradient_space_light(aurora_color, GLOB.base_starlight_color)
-
-/datum/round_event/magic_storm/proc/gradient_space_light(var/old_color, var/new_color)
-	// TODO: Actual fade in/fade out
-	set_starlight(new_color)
-
-/// Purple glowing magical mist
-/atom/movable/screen/parallax_layer/random/space_gas/magic
-	parallax_color = list(0,0,0,0, 1,0,2,0, 0,0,0,0, 0,0,0,1, 0,0,0,0)
