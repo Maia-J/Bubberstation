@@ -383,9 +383,7 @@
 	. = ..()
 	ADD_TRAIT(src, TRAIT_CONTRABAND, INNATE_TRAIT)
 	register_context()
-
-	if(SStts.tts_enabled) //This capsule informs you on why it cannot be deployed in a sliiiiightly different way.
-		voice = pick(SStts.available_speakers)
+	voice = SStts.random_tts_voice()
 
 /obj/item/survivalcapsule/fishing/add_context(atom/source, list/context, obj/item/held_item, mob/user)
 	if(!held_item || held_item == src)
@@ -556,7 +554,7 @@
 
 /obj/item/fish_genegun/item_interaction(mob/living/user, obj/item/item, list/modifiers)
 	var/is_syringe = istype(item, /obj/item/reagent_containers/syringe)
-	if(!is_syringe && istype(item, /obj/item/fish_gene))
+	if(!is_syringe && !istype(item, /obj/item/fish_gene))
 		return NONE
 	if(loaded_injector)
 		to_chat(user, span_warning("[src] already has [loaded_injector] loaded in it."))
@@ -666,7 +664,7 @@
 
 /obj/item/fish_gene/proc/inject_into_fish(obj/item/fish/fish, mob/living/user, obj/item/tool = src)
 	var/datum/fish_trait/trait = GLOB.fish_traits[trait_type]
-	if(!trait.apply_to_fish(fish))
+	if(!trait.apply_to_fish(fish, initial = FALSE))
 		to_chat(user, span_warning("You can't inject the \"[trait_type::name]\" trait into [fish]. [fish.p_they(TRUE)] either [fish.p_have()] it or [fish.p_are()] incompatible with it."))
 		return ITEM_INTERACT_BLOCKING
 	user.visible_message(span_notice("[user] injects [fish] with [tool]."), span_notice("You inject the \"[trait_type::name]\" trait into [fish]."))

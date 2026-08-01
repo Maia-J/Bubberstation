@@ -38,9 +38,6 @@ GLOBAL_LIST_INIT(glass_recipes, list ( \
 	fire = 50
 	acid = 100
 
-/obj/item/stack/sheet/glass/grind_results()
-	return list(/datum/reagent/silicon = 20)
-
 /obj/item/stack/sheet/glass/suicide_act(mob/living/carbon/user)
 	user.visible_message(span_suicide("[user] begins to slice [user.p_their()] neck with \the [src]! It looks like [user.p_theyre()] trying to commit suicide!"))
 	return BRUTELOSS
@@ -108,9 +105,6 @@ GLOBAL_LIST_INIT(pglass_recipes, list ( \
 	pickup_sound = 'sound/items/handling/materials/glass_pick_up.ogg'
 	drop_sound = 'sound/items/handling/materials/glass_drop.ogg'
 
-/obj/item/stack/sheet/plasmaglass/grind_results()
-	return list(/datum/reagent/silicon = 20, /datum/reagent/toxin/plasma = 10)
-
 /obj/item/stack/sheet/plasmaglass/fifty
 	amount = 50
 
@@ -171,7 +165,7 @@ GLOBAL_LIST_INIT(reinforced_glass_recipes, list ( \
 	drop_sound = 'sound/items/handling/materials/glass_drop.ogg'
 
 /obj/item/stack/sheet/rglass/grind_results()
-	return list(/datum/reagent/silicon = 20, /datum/reagent/iron = 10)
+	return list(/datum/reagent/silicon = 10, /datum/reagent/iron = 10)
 
 /obj/item/stack/sheet/rglass/fifty
 	amount = 50
@@ -213,7 +207,7 @@ GLOBAL_LIST_INIT(prglass_recipes, list ( \
 	drop_sound = 'sound/items/handling/materials/glass_drop.ogg'
 
 /obj/item/stack/sheet/plasmarglass/grind_results()
-	return list(/datum/reagent/silicon = 20, /datum/reagent/toxin/plasma = 10, /datum/reagent/iron = 10)
+	return list(/datum/reagent/silicon = 10, /datum/reagent/toxin/plasma = 10, /datum/reagent/iron = 10)
 
 /datum/armor/sheet_plasmarglass
 	melee = 20
@@ -376,24 +370,27 @@ GLOBAL_LIST_INIT(plastitaniumglass_recipes, list(
 	to_chat(user, span_warning("[src] cuts into your hand!"))
 	jab.apply_damage(force * 0.5, BRUTE, user.get_active_hand(), attacking_item = src)
 
-/obj/item/shard/attackby(obj/item/item, mob/user, list/modifiers, list/attack_modifiers)
-	if(istype(item, /obj/item/lightreplacer))
-		var/obj/item/lightreplacer/lightreplacer = item
+/obj/item/shard/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
+	if(istype(tool, /obj/item/lightreplacer))
+		var/obj/item/lightreplacer/lightreplacer = tool
 		lightreplacer.attackby(src, user)
-	else if(istype(item, /obj/item/stack/sheet/cloth))
-		var/obj/item/stack/sheet/cloth/cloth = item
-		to_chat(user, span_notice("You begin to wrap the [cloth] around the [src]..."))
-		if(do_after(user, craft_time, target = src))
-			var/obj/item/knife/shiv/shiv = new shiv_type
-			shiv.set_custom_materials(custom_materials)
-			cloth.use(1)
-			to_chat(user, span_notice("You wrap the [cloth] around the [src], forming a makeshift weapon."))
-			remove_item_from_storage(src, user)
-			qdel(src)
-			user.put_in_hands(shiv)
+		return ITEM_INTERACT_SUCCESS
 
-	else
-		return ..()
+	if(!istype(tool, /obj/item/stack/sheet/cloth))
+		return NONE
+
+	var/obj/item/stack/sheet/cloth/cloth = tool
+	to_chat(user, span_notice("You begin to wrap the [cloth] around the [src]..."))
+	if(do_after(user, craft_time, target = src))
+		return ITEM_INTERACT_FAILURE
+
+	var/obj/item/knife/shiv/shiv = new shiv_type
+	shiv.set_custom_materials(custom_materials)
+	cloth.use(1)
+	to_chat(user, span_notice("You wrap the [cloth] around the [src], forming a makeshift weapon."))
+	qdel(src)
+	user.put_in_hands(shiv)
+	return ITEM_INTERACT_SUCCESS
 
 /obj/item/shard/welder_act(mob/living/user, obj/item/I)
 	if(I.use_tool(src, user, 0, volume=50))

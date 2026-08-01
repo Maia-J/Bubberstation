@@ -1,6 +1,9 @@
 ///The standard amount of bodyparts a carbon has. Currently 6, HEAD/L_ARM/R_ARM/CHEST/L_LEG/R_LEG
 #define BODYPARTS_DEFAULT_MAXIMUM 6
 
+// The lowest alpha a dropped limb's sprite will render at, unlike a attached limb which can be 0
+#define LIMB_DROPPED_MIN_ALPHA 40 /// BUBBER EDIT ADDITION
+
 /// Limb Health
 
 /// The max damage a limb can take before it stops taking damage.
@@ -184,3 +187,16 @@ DEFINE_BITFIELD(surgery_state, list(
 #define UNCLAMPED_VESSELS_BLEEDING 1.5
 /// How much blood is lost from clamped vessels or cut organs?
 #define CLAMPED_VESSELS_BLEEDING 0.2
+
+/// Do not draw this bodypart overlay on husks
+#define HUSK_OVERLAY_NONE 0
+/// Draw this overlay on husks but grayscale it
+#define HUSK_OVERLAY_GRAYSCALE 1
+/// Draw this overlay on husks as normal
+#define HUSK_OVERLAY_NORMAL 2
+
+// Limb item categories
+/// Gauze slot, asserted to be wrap items
+#define LIMB_ITEM_GAUZE "gauze"
+/// Tourniquet slot
+#define LIMB_ITEM_TOURNIQUET "tourniquet"

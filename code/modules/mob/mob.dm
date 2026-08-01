@@ -468,6 +468,12 @@
 		return FALSE
 	return TRUE
 
+/mob/dead/observer/runechat_prefs_check(mob/target, visible_message_flags = NONE)
+	if(!..())
+		return FALSE
+	if(!target.client?.prefs.read_preference(/datum/preference/toggle/enable_runechat_ghosts))
+		return FALSE
+	return TRUE
 
 ///Get the item on the mob in the storage slot identified by the id passed in
 /mob/proc/get_item_by_slot(slot_id) as /obj/item
@@ -572,7 +578,6 @@
  */
 /mob/verb/examinate(atom/examinify as mob|obj|turf in view()) //It used to be oview(12), but I can't really say why
 	set name = "Examine"
-	set category = "IC"
 
 	DEFAULT_QUEUE_OR_CALL_VERB(VERB_CALLBACK(src, PROC_REF(run_examinate), examinify))
 
@@ -615,11 +620,20 @@
 	if(!result_combined)
 		var/list/result = examinify.examine(src)
 		var/atom_title = examinify.examine_title(src, thats = TRUE)
+		var/examine_headshot = examinify.get_chat_examine_headshot(src)
 		examining(examinify, result)
-		SEND_SIGNAL(src, COMSIG_MOB_EXAMINING, examinify, result)
+		var/alist/overrides = alist()
+		SEND_SIGNAL(src, COMSIG_MOB_EXAMINING, examinify, result, overrides)
+		if (length(overrides))
+			result = overrides[max(overrides)]
 		if(removes_double_click)
 			result += span_notice("<i>You can <a href=byond://?src=[REF(src)];run_examinate=[REF(examinify)]>examine</a> [examinify] closer...</i>")
-		result_combined = (atom_title ? fieldset_block("[atom_title].", jointext(result, "<br>"), "boxed_message") : boxed_message(jointext(result, "<br>")))
+		if(examine_headshot)
+			result.Insert(1, examine_headshot)
+		if(atom_title)
+			result_combined = fieldset_block("[atom_title].", jointext(result, "<br>"), "boxed_message")
+		else
+			result_combined = boxed_message(jointext(result, "<br>"))
 		result_combined = replacetext(result_combined, "<hr><br>", "<hr>") // BUBBER EDIT ADDITION - bit of a hack here to make sure we don't get linebreaks coming after headers, as well as properly adding the examine_block
 
 	to_chat(src, span_infoplain(result_combined))
@@ -793,13 +807,13 @@
 
 ///Update the pulling hud icon
 /mob/proc/update_pull_hud_icon()
-	hud_used?.pull_icon?.update_appearance()
+	hud_used?.screen_objects[HUD_MOB_PULL]?.update_appearance()
 
 ///Update the resting hud icon
 /mob/proc/update_rest_hud_icon()
 	if(!hud_used)
 		return FALSE
-	hud_used.rest_icon?.update_appearance()
+	hud_used.screen_objects[HUD_MOB_REST]?.update_appearance()
 	return TRUE
 
 /**
@@ -807,11 +821,7 @@
  *
  * Calls attack self on the item and updates the inventory hud for hands
  */
-/mob/verb/mode()
-	set name = "Activate Held Object"
-	set category = "Object"
-	set src = usr
-
+/mob/proc/mode()
 	DEFAULT_QUEUE_OR_CALL_VERB(VERB_CALLBACK(src, PROC_REF(execute_mode)))
 
 ///proc version to finish /mob/verb/mode() execution. used in case the proc needs to be queued for the tick after its first called
@@ -950,33 +960,6 @@
 	SEND_SIGNAL(src, COMSIG_MOB_GET_STATUS_TAB_ITEMS, .)
 	return .
 
-/**
- * Convert a list of spells into a displyable list for the statpanel
- *
- * Shows charge and other important info
- */
-/mob/proc/get_actions_for_statpanel()
-	var/list/data = list()
-	for(var/datum/action/cooldown/action in actions)
-		var/list/action_data = action.set_statpanel_format()
-		if(!length(action_data))
-			return
-
-		data += list(list(
-			// the panel the action gets displayed to
-			// in the future, this could probably be replaced with subtabs (a la admin tabs)
-			action_data[PANEL_DISPLAY_PANEL],
-			// the status of the action, - cooldown, charges, whatever
-			action_data[PANEL_DISPLAY_STATUS],
-			// the name of the action
-			action_data[PANEL_DISPLAY_NAME],
-			// a ref to the action button of this action for this mob
-			// it's a ref to the button specifically, instead of the action itself,
-			// because statpanel href calls click(), which the action button (not the action itself) handles
-			REF(action.viewers[hud_used]),
-		))
-
-	return data
 
 /mob/proc/swap_hand(held_index, silent = FALSE)
 	SHOULD_NOT_OVERRIDE(TRUE) // Override perform_hand_swap instead
@@ -1007,14 +990,8 @@
 
 	var/previous_index = active_hand_index
 	active_hand_index = held_index
-	if(hud_used)
-		var/atom/movable/screen/inventory/hand/held_location
-		held_location = hud_used.hand_slots["[previous_index]"]
-		if(!isnull(held_location))
-			held_location.update_appearance()
-		held_location = hud_used.hand_slots["[held_index]"]
-		if(!isnull(held_location))
-			held_location.update_appearance()
+	hud_used?.update_inventory_slot(ITEM_SLOT_HANDS, previous_index)
+	hud_used?.update_inventory_slot(ITEM_SLOT_HANDS, held_index)
 	return TRUE
 
 /mob/proc/activate_hand(selected_hand)
@@ -1428,7 +1405,7 @@
  */
 /mob/vv_get_dropdown()
 	. = ..()
-	VV_DROPDOWN_OPTION("", "---------")
+	VV_DROPDOWN_OPTION("", "--- /mob ---")
 	VV_DROPDOWN_OPTION(VV_HK_GIB, "Gib")
 	VV_DROPDOWN_OPTION(VV_HK_GIVE_AI, "Give AI Controller")
 	VV_DROPDOWN_OPTION(VV_HK_GIVE_AI_SPEECH, "Give Random AI Speech")
@@ -1456,13 +1433,9 @@
 		return
 
 	if(href_list[VV_HK_REGEN_ICONS])
-		if(!check_rights(NONE))
-			return
 		regenerate_icons()
 
 	if(href_list[VV_HK_REGEN_ICONS_FULL])
-		if(!check_rights(NONE))
-			return
 		cut_overlays()
 		regenerate_icons()
 
@@ -1513,8 +1486,6 @@
 		return SSadmin_verbs.dynamic_invoke_verb(usr, /datum/admin_verb/cmd_give_direct_control, src)
 
 	if(href_list[VV_HK_OFFER_GHOSTS])
-		if(!check_rights(NONE))
-			return
 		offer_control(src)
 
 	if(href_list[VV_HK_VIEW_PLANES])
@@ -1523,8 +1494,6 @@
 		usr.client.edit_plane_masters(src)
 
 	if(href_list[VV_HK_GIVE_ACCESS])
-		if(!check_rights(NONE))
-			return
 		AddComponent(/datum/component/simple_access, SSid_access.get_region_access_list(list(REGION_ALL_GLOBAL)))
 		to_chat(usr, span_notice("Access granted."))
 /**
@@ -1539,13 +1508,6 @@
 /mob/vv_auto_rename(new_name)
 	//Do not do parent's actions, as we *usually* do this differently.
 	fully_replace_character_name(real_name, new_name)
-
-///Show the language menu for this mob
-/mob/verb/open_language_menu_verb()
-	set name = "Open Language Menu"
-	set category = "IC"
-
-	get_language_holder().open_language_menu(usr)
 
 ///Adjust the nutrition of a mob
 /mob/proc/adjust_nutrition(change, forced = FALSE) //Honestly FUCK the oldcoders for putting nutrition on /mob someone else can move it up because holy hell I'd have to fix SO many typechecks
@@ -1585,15 +1547,24 @@
 /// Updates nutrition related effects
 /mob/living/proc/update_nutrition()
 	mob_mood?.update_nutrition_moodlets()
-	hud_used?.hunger?.update_hunger_bar()
+	var/atom/movable/screen/hunger/hunger_bar = hud_used?.screen_objects[HUD_MOB_HUNGER]
+	if (hunger_bar)
+		hunger_bar.update_hunger_bar()
 	SEND_SIGNAL(src, COMSIG_LIVING_UPDATE_NUTRITION)
 
 /// Apply a proper movespeed modifier based on items we have equipped
 /mob/proc/update_equipment_speed_mods()
 	var/speedies = 0
 	var/immutable_speedies = 0
+	//Bubber Addition
+	var/true_immute_speedies = 0
+	//Bubber Addition End
 	for(var/obj/item/thing in get_equipped_speed_mod_items())
-		if(thing.item_flags & IMMUTABLE_SLOW)
+		//Bubber Addition
+		if(thing.bubber_obj_flags & TRUE_IMMUTABLE_SLOW)
+			true_immute_speedies += thing.slowdown
+		//Bubber Addition End
+		else if(thing.item_flags & IMMUTABLE_SLOW)
 			immutable_speedies += thing.slowdown
 		else
 			speedies += thing.slowdown
@@ -1601,6 +1572,15 @@
 	//if  we have TRAIT_STURDY_FRAME, we reduce our overall speed penalty UNLESS that penalty would be a negative value, and therefore a speed boost.
 	if(speedies > 0 && HAS_TRAIT(src, TRAIT_STURDY_FRAME))
 		speedies *= 0.2
+	//Bubber Addition
+	if(true_immute_speedies)
+		add_or_update_variable_movespeed_modifier(
+			/datum/movespeed_modifier/equipment_speedmod/true_immutable,
+			multiplicative_slowdown = true_immute_speedies,
+		)
+	else
+		remove_movespeed_modifier(/datum/movespeed_modifier/equipment_speedmod/true_immutable)
+	//Bubber Addition End
 
 	if(immutable_speedies)
 		add_or_update_variable_movespeed_modifier(
@@ -1669,10 +1649,7 @@
 	canon_client = null
 
 ///Shows a tgui window with memories
-/mob/verb/memory()
-	set name = "Memories"
-	set category = "IC"
-	set desc = "View your character's memories."
+/mob/proc/open_memory_panel()
 	if(!mind)
 		var/fail_message = "You have no mind!"
 		if(isobserver(src))
@@ -1722,12 +1699,6 @@
 
 	data["memories"] = memories
 	return data
-
-/mob/verb/view_skills()
-	set category = "IC"
-	set name = "View Skills"
-
-	mind?.print_levels(src)
 
 /mob/key_down(key, client/client, full_key)
 	..()

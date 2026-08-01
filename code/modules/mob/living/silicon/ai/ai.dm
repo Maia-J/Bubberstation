@@ -2,7 +2,7 @@
 #define CHARACTER_TYPE_SELF "My Character"
 #define CHARACTER_TYPE_CREWMEMBER "Station Member"
 
-/mob/living/silicon/ai/Initialize(mapload, datum/ai_laws/L, mob/target_ai)
+/mob/living/silicon/ai/Initialize(mapload, datum/ai_laws/L, mob/target_ai, latejoining = FALSE)
 	. = ..()
 	if(!target_ai) //If there is no player/brain inside.
 		new/obj/structure/ai_core(loc, CORE_STATE_FINISHED) //New empty terminal.
@@ -23,7 +23,7 @@
 
 	create_eye()
 
-	if((target_ai.mind && target_ai.mind.active) || SSticker.current_state == GAME_STATE_SETTING_UP)
+	if((target_ai.mind && target_ai.mind.active) || SSticker.current_state == GAME_STATE_SETTING_UP || latejoining)
 		target_ai.mind.transfer_to(src)
 		if(is_antag())
 			to_chat(src, span_userdanger("You have been installed as an AI! "))
@@ -97,6 +97,7 @@
 	RegisterSignal(ai_tracking_tool, COMSIG_TRACKABLE_GLIDE_CHANGED, PROC_REF(tracked_glidesize_changed))
 
 	add_traits(list(TRAIT_PULL_BLOCKED, TRAIT_AI_ACCESS, TRAIT_HANDS_BLOCKED, TRAIT_CAN_GET_AI_TRACKING_MESSAGE, TRAIT_LOUD_BINARY), INNATE_TRAIT)
+	AddElement(/datum/element/block_area_power_fail)
 
 	//Heads up to other binary chat listeners that a new AI is online and listening to Binary.
 	if(announce_init_to_others && !is_centcom_level(z)) //Skip new syndicate AIs and also new AIs on centcom Z
@@ -173,8 +174,11 @@
 
 /mob/living/silicon/ai
 	var/selected_display_name
+	var/mutable_appearance/portrait_appearance
 
 /mob/living/silicon/ai/proc/set_core_display_icon(input, client/C)
+	portrait_appearance = null
+
 	var/preferred_choice
 	if(input)
 		preferred_choice = input
@@ -538,13 +542,8 @@
 	var/mob/living/bot = bot_ref?.resolve()
 	if(!bot)
 		return
-	var/summon_success
-	if(isbasicbot(bot))
-		var/mob/living/basic/bot/basic_bot = bot
-		summon_success = basic_bot.summon_bot(src, waypoint, grant_all_access = TRUE)
-	else
-		var/mob/living/simple_animal/bot/simple_bot = bot
-		summon_success = simple_bot.call_bot(src, waypoint)
+	var/mob/living/basic/bot/basic_bot = bot
+	var/summon_success = basic_bot.summon_bot(src, waypoint, grant_all_access = TRUE)
 
 	var/chat_message = summon_success ? "Sending command to bot..." : "Interface error. Unit is already in use."
 	to_chat(src, span_notice("[chat_message]"))
@@ -734,6 +733,15 @@
 
 	to_chat(src, "Camera lights activated.")
 
+// Allows AIs to turn their hologram instead on alt-move
+/mob/living/silicon/ai/keybind_face_direction(direction)
+	var/obj/machinery/holopad/active_pad = current
+	if(istype(active_pad) && active_pad.masters[src])
+		var/obj/effect/overlay/holo_pad_hologram/ai_holo = active_pad.masters[src]
+		ai_holo.setDir(direction)
+		return
+	return ..()
+
 //AI_CAMERA_LUMINOSITY
 
 /mob/living/silicon/ai/proc/light_cameras()
@@ -888,9 +896,8 @@
 	to_chat(src, "You are also capable of hacking APCs, which grants you more points to spend on your Malfunction powers. The drawback is that a hacked APC will give you away if spotted by the crew. Hacking an APC takes 60 seconds.")
 	view_core() //A BYOND bug requires you to be viewing your core before your verbs update
 	malf_picker = new /datum/module_picker
-	if(!IS_MALF_AI(src)) //antagonists have their modules built into their antag info panel. this is for adminbus and the combat upgrade
-		modules_action = new(malf_picker)
-		modules_action.Grant(src)
+	modules_action = new(malf_picker)
+	modules_action.Grant(src)
 
 /mob/living/silicon/ai/reset_perspective(atom/new_eye)
 	SHOULD_CALL_PARENT(FALSE) // I hate you all
@@ -1023,6 +1030,8 @@
 	button_icon_state = "ai_shell"
 
 /datum/action/innate/deploy_shell/Trigger(mob/clicker, trigger_flags)
+	if(!..())
+		return
 	var/mob/living/silicon/ai/AI = owner
 	if(!AI)
 		return
@@ -1036,6 +1045,8 @@
 	var/mob/living/silicon/robot/last_used_shell
 
 /datum/action/innate/deploy_last_shell/Trigger(mob/clicker, trigger_flags)
+	if(!..())
+		return
 	if(!owner)
 		return
 	if(last_used_shell)
@@ -1068,16 +1079,10 @@
 		end_multicam()
 
 /mob/living/silicon/ai/up()
-	set name = "Move Upwards"
-	set category = "IC"
-
 	if(eyeobj.zMove(UP, z_move_flags = ZMOVE_FEEDBACK))
 		to_chat(src, span_notice("You move upwards."))
 
 /mob/living/silicon/ai/down()
-	set name = "Move Down"
-	set category = "IC"
-
 	if(eyeobj.zMove(DOWN, z_move_flags = ZMOVE_FEEDBACK))
 		to_chat(src, span_notice("You move down."))
 
@@ -1225,7 +1230,7 @@
 /mob/living/silicon/ai/update_overlays()
 	. = ..()
 
-	var/screen_state
+	var/screen_state // Display
 	var/lights_state // Lights
 
 	if(!client && !mind)
@@ -1244,16 +1249,26 @@
 		else
 			screen_state = "ai_dead"
 
-		lights_state = "lights_dead"
+		var/mutable_appearance/screen_overlay = mutable_appearance(icon, screen_state)
+		screen_overlay.appearance_flags = RESET_COLOR | KEEP_APART
+		. += screen_overlay
 
+		lights_state = "lights_dead"
 		set_light(0.2, 0.2, LIGHT_COLOR_FAINT_CYAN)
 
 	else
-		screen_state = display_icon_override || "ai"
-
 		lights_state = "lights_active"
-
 		set_light(0.3, 0.3, LIGHT_COLOR_CYAN)
+
+		if(portrait_appearance)
+			. += portrait_appearance
+		else
+			screen_state = display_icon_override || "ai"
+			var/mutable_appearance/screen_overlay = mutable_appearance(icon, screen_state)
+			screen_overlay.layer = FLOAT_LAYER + 0.1
+			screen_overlay.appearance_flags = RESET_COLOR | KEEP_APART
+			. += screen_overlay
+			. += emissive_appearance(icon, screen_state, src)
 
 
 	// Lights
@@ -1263,15 +1278,6 @@
 	. += lights_overlay
 
 	. += emissive_appearance(icon, lights_state, src)
-
-
-	// Display
-	var/mutable_appearance/screen_overlay = mutable_appearance(icon, screen_state)
-	screen_overlay.layer = FLOAT_LAYER + 0.1
-	screen_overlay.appearance_flags = RESET_COLOR | KEEP_APART
-	. += screen_overlay
-
-	. += emissive_appearance(icon, screen_state, src)//AI glow!
 
 
 #undef HOLOGRAM_CHOICE_CHARACTER

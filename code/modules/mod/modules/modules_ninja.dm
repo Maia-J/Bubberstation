@@ -547,7 +547,7 @@
 	return COMPONENT_CANCEL_ATTACK_CHAIN
 
 //BOTS, overloads them and causes a explosion
-/mob/living/simple_animal/bot/ninjadrain_act(mob/living/carbon/human/ninja, obj/item/mod/module/hacker/hacking_module)
+/mob/living/basic/bot/ninjadrain_act(mob/living/carbon/human/ninja, obj/item/mod/module/hacker/hacking_module)
 	to_chat(src, span_boldwarning("Your circutry suddenly begins heating up!"))
 	if(!do_after(ninja, 1.5 SECONDS, target = src, hidden = TRUE))
 		return COMPONENT_CANCEL_ATTACK_CHAIN
@@ -779,7 +779,7 @@
 
 /obj/item/mod/module/dna_lock/reinforced/on_mod_activation(datum/source, mob/user)
 	. = ..()
-	if(. != MOD_CANCEL_ACTIVATE || !isliving(user))
+	if(. != MOD_CANCEL_ACTIVATE || !isliving(user) || user != mod.wearer)
 		return
 	if(istype(mod, /obj/item/mod/control/pre_equipped/protean)) // BUBBER EDIT START
 		return													// BUBBER EDIT END
